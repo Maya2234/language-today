@@ -303,3 +303,6 @@ body.page { height: auto; }
 .tokpage .num { text-align: right; }
 .tokpage code { font-size: 12px; }
 @media (max-width: 720px) { .tokkpis { grid-template-columns: repeat(2, 1fr); } .tokkpis .kpi { border-left: 0 !important; border-top: 1px solid var(--border); } }
+.region { animation: region-in .25s ease-out; }
+@keyframes region-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .region { animation: none; } }

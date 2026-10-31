@@ -15,7 +15,9 @@ const [world, countries, languages, anchors, meta] = await Promise.all(
 const lazy = (f) => { let p; return () => (p ??= load(f)); };
 const loaders = { glot: lazy("glottolog_by_country.json"), gindex: lazy("glottolog_index.json"), dialects: lazy("dialects.json"), learn: lazy("learn.json") };
 const regionFiles = {};
-const loadRegions = (iso2) => (regionFiles[iso2] ??= fetch(`data/regions/${iso2}.json`).then((r) => (r.ok ? r.json() : [])).catch(() => []));
+const regionCache = {};
+const loadRegions = (iso2) => (regionFiles[iso2] ??= fetch(`data/regions/${iso2}.json`).then((r) => (r.ok ? r.json() : [])).catch(() => [])
+  .then((rs) => (regionCache[iso2] = rs)));
 const cache = {};  // resolved lazy files, for synchronous use after loading
 const need = (...names) => Promise.all(names.map(async (n) => (cache[n] ??= await loaders[n]())));
 
@@ -65,8 +67,11 @@ const svg = d3.select("#map");
 const gRoot = svg.append("g");
 const sphere = gRoot.append("path").attr("class", "sphere").datum({ type: "Sphere" });
 const grat = gRoot.append("path").attr("class", "graticule").datum(d3.geoGraticule10());
-const coast = gRoot.append("path").attr("class", "coast").datum(topojson.merge(world, world.objects.countries.geometries.filter((g) => byNumeric.get(String(g.id)) !== "AQ")));
-const paths = gRoot.selectAll("path.country").data(land.features).join("path").attr("class", "country").attr("vector-effect", "non-scaling-stroke");
+const coastOf = (w) => topojson.merge(w, w.objects.countries.geometries.filter((g) => byNumeric.get(String(g.id)) !== "AQ"));
+const coastHi = coastOf(world);
+const coast = gRoot.append("path").attr("class", "coast").attr("vector-effect", "non-scaling-stroke").datum(coastHi);
+const gCountries = gRoot.append("g");  // own group so the selected country can be raised above its neighbours only
+const paths = gCountries.selectAll("path.country").data(land.features).join("path").attr("class", "country").attr("vector-effect", "non-scaling-stroke");
 const gRegions = gRoot.append("g");
 const gPts = gRoot.append("g");
 let projection, path, baseScale, rot = [-15, -25], last = d3.zoomIdentity, resetting = false, points = [];
@@ -90,13 +95,29 @@ function setupProjection() {
   // the flat map opens zoomed in on the populated latitudes
   if (state.proj === "flat") svg.call(zoom.transform, d3.zoomIdentity.translate(w / 2, h / 2).scale(1.3).translate(-w / 2, -h * 0.47));
 }
-function draw() {
+// While the globe moves, draw the 110m outlines and hide regions; redraw at full detail once it settles.
+let lo = null, settleTimer = 0, framePending = false;
+load("countries-110m.json").then((w) => {
+  const byIso = new Map(topojson.feature(w, w.objects.countries).features.map((f) => [byNumeric.get(String(f.id)), f]));
+  lo = { coast: coastOf(w), feature: (f) => byIso.get(f.iso2) ?? f };
+});
+function draw(fast = false) {
+  fast = fast && lo;
   sphere.attr("d", path);
   grat.attr("d", path);
-  coast.attr("d", path);
-  paths.attr("d", path);
-  gRegions.selectAll("path").attr("d", path);
+  coast.attr("d", path(fast ? lo.coast : coastHi));
+  paths.attr("d", fast ? (f) => path(lo.feature(f)) : path);
+  gRegions.style("display", fast ? "none" : null);
+  if (!fast) gRegions.selectAll("path").attr("d", path);
   drawPoints();
+}
+function drawMoving() {  // at most one fast draw per frame, then a full-detail draw when movement stops
+  if (!framePending) {
+    framePending = true;
+    requestAnimationFrame(() => { framePending = false; draw(true); });
+  }
+  clearTimeout(settleTimer);
+  settleTimer = setTimeout(() => draw(), 140);
 }
 function drawPoints() {
   if (!projection) return;
@@ -117,7 +138,7 @@ const zoom = d3.zoom().scaleExtent([0.7, 12]).clickDistance(4).on("zoom", (e) =>
   }
   projection.scale(baseScale * t.k);
   last = t;
-  draw();
+  drawMoving();
 });
 svg.call(zoom);
 new ResizeObserver(() => setupProjection()).observe(svg.node());
@@ -126,22 +147,26 @@ $("#zoomOut").addEventListener("click", () => svg.transition().duration(250).cal
 $("#zoomReset").addEventListener("click", () => { rot = [-15, -25]; setupProjection(); });
 
 // Center the map on a feature: zoom to its bounds on the flat map, rotate to it on the globe.
+// Resolves when the move ends or is interrupted by a newer one.
 function centerOn(feature) {
+  if (!path || !feature) return Promise.resolve();  // map not laid out yet
   const { width: w, height: h } = svg.node().getBoundingClientRect();
   if (state.proj === "flat") {
     const [[x0, y0], [x1, y1]] = path.bounds(feature);
     const k = Math.max(1, Math.min(10, 0.75 / Math.max((x1 - x0) / w, (y1 - y0) / h)));
-    svg.transition().duration(650).call(zoom.transform, d3.zoomIdentity.translate(w / 2, h / 2).scale(k).translate(-(x0 + x1) / 2, -(y0 + y1) / 2));
-    return;
+    return settled(svg.transition().duration(750).ease(d3.easeCubicInOut)
+      .call(zoom.transform, d3.zoomIdentity.translate(w / 2, h / 2).scale(k).translate(-(x0 + x1) / 2, -(y0 + y1) / 2)), 750);
   }
   const [lon, lat] = d3.geoCentroid(feature);
   const from = [...rot], to = [-lon, Math.max(-75, Math.min(75, -lat))];
-  d3.transition().duration(650).tween("rotate", () => (t) => {
-    rot = d3.interpolate(from, to)(t);
-    projection.rotate(rot);
-    draw();
-  });
+  const turn = d3.interpolate(from, [from[0] + ((to[0] - from[0] + 540) % 360) - 180, to[1]]);  // the short way round
+  const dist = d3.geoDistance([-from[0], -from[1]], [lon, lat]);
+  const ms = 450 + (350 * dist) / Math.PI;
+  return settled(svg.transition().duration(ms).ease(d3.easeCubicInOut)
+    .tween("rotate", () => (t) => { rot = turn(t); projection.rotate(rot); draw(true); }), ms).then(() => draw());
 }
+// A transition's end, its interruption, or a timeout (background tabs may never run it), whichever comes first.
+const settled = (t, ms) => Promise.race([t.end().catch(() => {}), new Promise((r) => setTimeout(r, ms + 250))]);
 
 // ---------- layers ----------
 function layer() {
@@ -182,8 +207,8 @@ let current = new Map();
 function recolor() {
   current = layer();
   const sc = scaleForMode();
-  paths.attr("fill", (f) => { const v = current.get(f.iso2); return v == null ? css("--nodata") : sc(v); })
-    .classed("selected", (f) => f.iso2 && f.iso2 === state.selected);
+  paths.attr("fill", (f) => { const v = current.get(f.iso2); return v == null ? css("--nodata") : sc(v); });
+  markSelected();
   gRegions.selectAll("path").attr("fill", (f) => regionFill(f.properties));
   renderLegend();
 }
@@ -526,6 +551,9 @@ function regionFill(r) {
   const v = current.get(state.selected);
   return v == null ? css("--nodata") : scaleForMode()(v);
 }
+function markSelected() {
+  paths.classed("selected", (f) => f.iso2 && f.iso2 === state.selected).filter(".selected").raise();
+}
 function drawRegions() {
   gRegions.selectAll("path").data(state.regions.map(regionFeature), (f) => f.id).join("path")
     .attr("class", (f) => `region${f.id === state.region ? " selected" : ""}${f.properties.shares.length ? " has-data" : ""}`)
@@ -564,11 +592,12 @@ function showTip(e, html) {
   tip.style.left = (x + 16 + tw > box.clientWidth ? x - tw - 12 : x + 16) + "px";
   tip.style.top = Math.max(8, Math.min(y + 12, box.clientHeight - th - 8)) + "px";
 }
-function selectRegion(id) {
+async function selectRegion(id) {
   state.region = id;
-  gRegions.selectAll("path").classed("selected", (f) => f.id === id);
+  tip.hidden = true;
+  gRegions.selectAll("path").classed("selected", (f) => f.id === id).filter(".selected").raise();
+  await renderPanel();  // render before the move starts so it doesn't steal the animation's frames
   if (id) centerOn(regionFeature(state.regions.find((r) => r.id === id)));
-  renderPanel();
 }
 function regionPanel(r) {
   const c = countries[state.selected], pl = pooled(r);
@@ -612,13 +641,26 @@ const pageLink = (code) => `<a class="btn outline pagelink" href="language.html?
 
 // ---------- state changes ----------
 async function update() { recolor(); await renderPanel(); }
+// Respond at once: outline + panel first, then the move; regions are drawn when both the move and their file are done.
+let selectSeq = 0;
 async function select(iso2, { center = false } = {}) {
+  const seq = ++selectSeq;
+  const regionsP = iso2 ? loadRegions(iso2) : Promise.resolve([]);
   state.selected = iso2;
   state.region = null;
-  state.regions = iso2 ? await loadRegions(iso2) : [];
+  state.regions = (iso2 && regionCache[iso2]) || [];
+  tip.hidden = true;
+  if (!state.regions.length) drawRegions();  // clear the previous country's regions
+  await update();
+  if (seq !== selectSeq) return;
+  const moved = center && iso2 ? centerOn(features.find((f) => f.iso2 === iso2)) : null;
+  const regions = await regionsP;
+  await moved;
+  if (seq !== selectSeq) return;
+  const fresh = regions !== state.regions;
+  state.regions = regions;
   drawRegions();
-  if (center && iso2) centerOn(features.find((f) => f.iso2 === iso2));
-  update();
+  if (fresh && regions.length) renderPanel();  // add the regions list once the file has arrived
 }
 async function setLang(code) {
   state.lang = code || null;

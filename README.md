@@ -5,6 +5,7 @@ It also has a "where could I talk?" tool: enter the languages you speak to see w
 
 Built with agentic, spec-driven development using Claude Code. See `specs/` for the specs, `specs/STATUS.md` for progress, and `docs/log/` for the logs.
 
+**Live site:** https://maya2234.github.io/language-today/  
 Repository: https://github.com/Maya2234/language-today
 
 ## Run

@@ -11,3 +11,4 @@
 {"timestamp": "2026-10-30T22:05:00-07:00", "phase": "3-ui", "actor": "claude", "summary": "Region layer, popups, region panel, hello card, language page; found and fixed a template-literal syntax error in language.js via in-browser import"}
 {"timestamp": "2026-10-30T22:05:00-07:00", "phase": "3-scrape", "actor": "claude", "summary": "Scrape finished: hello 228 languages (IPA 122, recordings 38), 124 languages with a free course, Wikibooks 160 titles, Wikipedia 1345 + Wiktionary 514 links verified; 52/52 tests (run 20261030T220454)"}
 {"timestamp": "2026-10-30T22:30:00-07:00", "phase": "6-publish", "actor": "claude", "summary": "Public repo https://github.com/Maya2234/language-today created and pushed (gh 2.103.3)"}
+{"timestamp": "2026-10-30T22:40:00-07:00", "phase": "6-publish", "actor": "claude", "summary": "GitHub Pages live at https://maya2234.github.io/language-today/ (run 41173263992 success; files and page verified)"}

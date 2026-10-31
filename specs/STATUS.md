@@ -6,7 +6,9 @@
 - Phase 2 atlas: flat map default (zoomed), globe toggle, icon toolbar right, 4 layers, hover tooltip with languages,
   search over all languages and dialects, dialect points, year slider to 2026, honest "no data" / lower-bound reach
 - UI style: taste-skill app sheet "Achromatic ledger" (seed 1160862325) + Watermelon UI (MIT) controls in plain CSS
-- Tests: 44/44 (`python pipeline/run_tests.py --phase <name>`)
+- Phase 5 token dashboard: `site/tokens.html` from `pipeline/tokens.py` → `site/data/tokens.json` (spec 05); linked from the atlas sidebar
+- Docs in root: CONTRIBUTIONS.md, EVALUATION_AND_REFLECTION.md (draft for Maya), TOKEN_USAGE.md
+- Tests: 59/59 (`python pipeline/run_tests.py --phase <name>`)
 
 ## Known gaps
 - No second-language figures for e.g. South Korea, Vietnam (shown as no data / lower bound)
@@ -17,7 +19,8 @@
 ## Next
 1. User review of the new UI
 2. Verify census anchors; consider Spanish (Instituto Cervantes) and Arabic L2 sources
-3. Phase 3 validation dashboard → 4 timeline → 5 token dashboard (publish each under site/ so Pages serves it)
+3. Phase 3 validation dashboard → 4 timeline page (publish each under site/ so Pages serves it)
+4. Maya: complete EVALUATION_AND_REFLECTION.md
 
 ## Published
 - GitHub: https://github.com/Maya2234/language-today (public, pushed 2026-10-30)

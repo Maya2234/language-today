@@ -131,3 +131,28 @@ test("formatCount", () => {
   assert.equal(L.formatCount(16.04e6), "16.0 M");
   assert.equal(L.formatCount(950), "950");
 });
+
+const calls = [
+  { p: 0, step: "a", in: 1, out: 10, cw: 100, cr: 1000, ctx: 1101 },
+  { p: 0, step: "b", in: 0, out: 20, cw: 50, cr: 2000, ctx: 2050 },
+  { p: 1, step: "a", in: 2, out: 5, cw: 10, cr: 3000, ctx: 3012 },
+];
+
+test("tokenTotals sums every field and keeps the peak context", () => {
+  const t = L.tokenTotals(calls);
+  assert.deepEqual([t.calls, t.in, t.out, t.cw, t.cr, t.peak_ctx], [3, 3, 35, 160, 6000, 3012]);
+  assert.equal(t.processed, 3 + 35 + 160 + 6000);
+  assert.equal(L.tokenTotals([]).peak_ctx, 0);
+});
+
+test("groupTokens groups in first-seen order and the groups add up to the total", () => {
+  const g = L.groupTokens(calls, "step");
+  assert.deepEqual(g.map((x) => [x.key, x.calls, x.out]), [["a", 2, 15], ["b", 1, 20]]);
+  assert.equal(g.reduce((s, x) => s + x.cr, 0), L.tokenTotals(calls).cr);
+  assert.deepEqual(L.groupTokens(calls, "p").map((x) => x.key), [0, 1]);
+});
+
+test("share handles an empty whole", () => {
+  assert.equal(L.share(1, 4), 25);
+  assert.equal(L.share(1, 0), 0);
+});

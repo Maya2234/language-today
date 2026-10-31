@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Token Usage</title>
+<meta name="description" content="How many Claude Code tokens Language Today used, by project step, by prompt, and by working practice.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="page">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+</defs></svg>
+<header class="pagehead">
+  <a class="btn ghost" href="index.html"><svg class="i"><use href="#i-back"/></svg>Atlas</a>
+  <span class="brandline"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="var(--chart-3)"/><path d="M4 16h24M16 2c5 4 5 24 0 28M16 2c-5 4-5 24 0 28" stroke="#fff" stroke-width="2" fill="none"/></svg>Language Today</span>
+</header>
+<main class="langpage tokpage">
+  <div class="langhead">
+    <h1>Token usage</h1>
+    <p class="sub">What building this project with Claude Code (Opus 5.5, Pro plan) cost in tokens, where the tokens went, and how one long session compares with starting fresh.</p>
+  </div>
+  <div class="filterrow">
+    <div class="seg" role="group" aria-label="Session" id="sessionSeg"></div>
+    <span class="note" id="sessionNote"></span>
+  </div>
+  <div class="kpis tokkpis" id="kpis"></div>
+
+  <section class="card wide">
+    <h2>Context re-read on every call</h2>
+    <p class="note">Each model call re-sends the whole conversation so far. Without <code>/clear</code> or <code>/compact</code>, this grows with every turn. Vertical lines mark your prompts.</p>
+    <div class="chart" id="ctxChart"></div>
+    <details><summary>Table</summary><div class="tablewrap" id="ctxTable"></div></details>
+  </section>
+
+  <div class="langgrid">
+    <section class="card">
+      <div class="cardhead"><h2>By project step</h2>
+        <div class="seg" role="group" aria-label="Metric" id="metricSeg"></div></div>
+      <p class="note">Step is estimated from the tools each call used (rules in <code>pipeline/tokens.py</code>). Token counts are measured.</p>
+      <div id="stepChart"></div>
+      <details><summary>Table</summary><div class="tablewrap" id="stepTable"></div></details>
+    </section>
+    <section class="card">
+      <h2>Cost of one call: fresh vs late in a long session</h2>
+      <p class="note" id="practiceNote">Tokens re-read by a single call.</p>
+      <div id="practiceChart"></div>
+      <h3>Fixed overhead every call pays</h3>
+      <div id="overheadChart"></div>
+    </section>
+  </div>
+
+  <section class="card wide">
+    <h2>By prompt</h2>
+    <p class="note">Total tokens processed while answering each of your messages (input, cache write, cache read and output).</p>
+    <div id="promptChart"></div>
+    <details><summary>Table</summary><div class="tablewrap" id="promptTable"></div></details>
+  </section>
+
+  <section class="card wide">
+    <h2>Plan usage and method</h2>
+    <div id="planBox"></div>
+    <p class="note" id="method"></p>
+    <p class="note">The written analysis is in <a href="https://github.com/Maya2234/language-today/blob/main/TOKEN_USAGE.md">TOKEN_USAGE.md</a>.</p>
+  </section>
+</main>
+<div id="tooltip" class="tooltip" role="tooltip" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script type="module" src="js/tokens.js"></script>
+</body>
+</html>

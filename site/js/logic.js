@@ -154,3 +154,32 @@ export function formatCount(n) {
   if (n >= 1e3) return (n / 1e3).toFixed(0) + " k";
   return String(Math.round(n));
 }
+
+// ---- token dashboard ----
+export const TOKEN_METRICS = ["in", "out", "cw", "cr"];
+
+// Sum token fields over model calls; ctx_total = everything the model processed (input + cache write + cache read).
+export function tokenTotals(calls) {
+  const t = { calls: calls.length, in: 0, out: 0, cw: 0, cr: 0, peak_ctx: 0 };
+  for (const c of calls) {
+    for (const k of TOKEN_METRICS) t[k] += c[k];
+    t.peak_ctx = Math.max(t.peak_ctx, c.ctx);
+  }
+  t.processed = t.in + t.cw + t.cr + t.out;
+  return t;
+}
+
+// Group calls by a key (e.g. "step" or "p") into [{key, ...tokenTotals}], keeping first-seen order.
+export function groupTokens(calls, key) {
+  const groups = new Map();
+  for (const c of calls) {
+    if (!groups.has(c[key])) groups.set(c[key], []);
+    groups.get(c[key]).push(c);
+  }
+  return [...groups].map(([k, cs]) => ({ key: k, ...tokenTotals(cs) }));
+}
+
+// Share of a part in a whole as a percent, 0 when the whole is empty.
+export function share(part, whole) {
+  return whole ? (100 * part) / whole : 0;
+}

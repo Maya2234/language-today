@@ -272,3 +272,34 @@ class TestNamingAndLearning(unittest.TestCase):
         self.assertIn("Duolingo", titles("es"))
         self.assertIn("Language Transfer", titles("sw"))
         self.assertIn("Live Lingua", titles("am"))
+
+
+class TestTokens(unittest.TestCase):
+    def setUp(self):
+        self.t = load("tokens.json")
+
+    def test_provenance_fields(self):
+        self.assertIn("transcripts", self.t["source"])
+        self.assertIn("measured", self.t["method"])
+        self.assertIn("estimated", self.t["method"])
+
+    def test_session_totals_equal_sum_of_calls(self):
+        self.assertGreaterEqual(len(self.t["sessions"]), 1)
+        for s in self.t["sessions"]:
+            for k in ("in", "out", "cw", "cr"):
+                self.assertEqual(s["totals"][k], sum(c[k] for c in s["calls"]), (s["id"], k))
+            self.assertEqual(s["totals"]["calls"], len(s["calls"]))
+            self.assertEqual(s["totals"]["peak_ctx"], max(c["ctx"] for c in s["calls"]))
+
+    def test_calls_have_known_step_and_prompt(self):
+        steps = {x["id"] for x in self.t["steps"]}
+        for s in self.t["sessions"]:
+            for c in s["calls"]:
+                self.assertIn(c["step"], steps)
+                self.assertTrue(0 <= c["p"] < len(s["prompts"]))
+                self.assertEqual(c["ctx"], c["in"] + c["cw"] + c["cr"])
+
+    def test_unrelated_sessions_excluded(self):
+        ids = {s["id"] for s in self.t["sessions"]}
+        for e in self.t["excluded"]:
+            self.assertNotIn(e["id"], ids)

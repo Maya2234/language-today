@@ -17,4 +17,7 @@
 ## Next
 1. User review of the new UI
 2. Verify census anchors; consider Spanish (Instituto Cervantes) and Arabic L2 sources
-3. Phase 3 validation dashboard → 4 timeline → 5 token dashboard → 6 publish (GitHub + Pages)
+3. Phase 3 validation dashboard → 4 timeline → 5 token dashboard → 6 GitHub Pages
+
+## Published
+- GitHub: https://github.com/Maya2234/language-today (public, pushed 2026-10-30)

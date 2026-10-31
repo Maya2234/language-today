@@ -76,6 +76,29 @@ test("reachability: estimate always within [low, high]", () => {
   assert.ok(r.low <= r.estimate + 1e-12 && r.estimate <= r.high + 1e-12);
 });
 
+test("reachability: lists your languages that have no figure in the country", () => {
+  const r = L.reachability([{ code: "aa", pct: 40 }], [{ code: "aa", level: "fluent" }, { code: "zz", level: "fluent" }]);
+  assert.deepEqual(r.missing, ["zz"]);
+  close(r.estimate, 0.4);
+  assert.deepEqual(L.reachability([{ code: "aa", pct: 40 }], [{ code: "aa", level: "fluent" }]).missing, []);
+});
+
+test("formatPct never prints a non-zero share as 0%", () => {
+  assert.equal(L.formatPct(0.004), "<0.01%");
+  assert.equal(L.formatPct(0.7), "0.70%");
+  assert.equal(L.formatPct(3.75), "3.8%");
+  assert.equal(L.formatPct(28), "28%");
+  assert.equal(L.formatPct(0), "0%");
+  assert.equal(L.formatPct(null), "–");
+});
+
+test("searchByName ranks prefix matches before substring matches", () => {
+  const items = [{ name: "Swiss German" }, { name: "German" }, { name: "Low German" }, { name: "French" }];
+  assert.deepEqual(L.searchByName(items, "germ").map((i) => i.name), ["German", "Swiss German", "Low German"]);
+  assert.deepEqual(L.searchByName(items, "  "), []);
+  assert.equal(L.searchByName(items, "e", 2).length, 2);
+});
+
 test("languageTotal sums speakers across countries and ranks them", () => {
   const t = L.languageTotal(countries, "bb", 2024, idx);
   assert.equal(t.speakers, 1300);

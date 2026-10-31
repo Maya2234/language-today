@@ -17,6 +17,10 @@ python pipeline/run_tests.py --phase dev
 - Unicode CLDR 46 `territoryInfo`: share of each country's population speaking each language (first and second language combined)
 - World Bank population, 1960–2024
 - Glottolog: language families, locations, endangerment, last year documented
+- English Wikipedia second-language speaker tables (English, French, German, Russian, Portuguese), pinned to reviewed revisions
 - Curated census anchor points for documented language shifts (`pipeline/historical_anchors.json`, with citations)
 
 Every figure is tagged `measured` (a census value), `estimated` (interpolated between census years) or `derived` (a CLDR share × population).
+
+## Credits
+Interface controls adapted from [Watermelon UI](https://github.com/WatermelonCorp/watermelon-platform) (MIT). Typeface: Geist.

@@ -5,6 +5,14 @@ from pathlib import Path
 
 RAW = Path(__file__).resolve().parent.parent / "data" / "raw"
 CLDR = "46.0.0"
+# Second-language (L1+L2) speaker tables, pinned to the revision that was reviewed.
+WIKIPEDIA = {
+    "en": ("List of countries by English-speaking population", 1379399265),
+    "fr": ("Geographical distribution of French speakers", 1379390459),
+    "de": ("Geographical distribution of German speakers", 1379876187),
+    "ru": ("Geographical distribution of Russian speakers", 1374595124),
+    "pt": ("Portuguese-speaking world", 1380645261),
+}
 SOURCES = {
     "cldr_territoryInfo.json": f"https://cdn.jsdelivr.net/npm/cldr-core@{CLDR}/supplemental/territoryInfo.json",
     "cldr_codeMappings.json": f"https://cdn.jsdelivr.net/npm/cldr-core@{CLDR}/supplemental/codeMappings.json",
@@ -15,6 +23,8 @@ SOURCES = {
     "wb_population.json": "https://api.worldbank.org/v2/country/all/indicator/SP.POP.TOTL?format=json&per_page=20000&date=1960:2024",
     "glottolog_languages.csv": "https://raw.githubusercontent.com/glottolog/glottolog-cldf/master/cldf/languages.csv",
     "glottolog_values.csv": "https://raw.githubusercontent.com/glottolog/glottolog-cldf/master/cldf/values.csv",
+    **{f"wikipedia_{lang}.json": "https://en.wikipedia.org/w/api.php?action=parse&format=json&formatversion=2"
+       f"&prop=text|revid&oldid={rev}" for lang, (_, rev) in WIKIPEDIA.items()},
     "countries-110m.json": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json",
 }
 
@@ -27,7 +37,8 @@ def main(force=False):
             print(f"have  {name}")
             continue
         print(f"fetch {name} <- {url}")
-        with urllib.request.urlopen(url, timeout=600) as r:
+        req = urllib.request.Request(url, headers={"User-Agent": "LanguageToday/0.2 (course project; data pipeline)"})
+        with urllib.request.urlopen(req, timeout=600) as r:
             dest.write_bytes(r.read())
 
 

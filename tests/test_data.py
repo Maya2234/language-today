@@ -74,12 +74,22 @@ class TestCountries(unittest.TestCase):
 
 
 class TestLanguages(unittest.TestCase):
-    REFERENCE = {"en": 1.5e9, "zh": 1.1e9, "hi": 0.6e9, "es": 0.56e9}  # Ethnologue 2024 L1+L2, rounded
+    # Ethnologue 2024 L1+L2 (rounded) and OIF 2022 for French. English uses its own band: since session 2 the
+    # pipeline takes Wikipedia's self-reported-ability figures where higher, which puts English near 2.1 B.
+    REFERENCE = {"zh": 1.1e9, "hi": 0.6e9, "es": 0.56e9, "fr": 0.32e9}
 
     def test_speaker_totals_near_reference(self):
         for code, ref in self.REFERENCE.items():
             ratio = LANGUAGES[code]["speakers"] / ref
             self.assertTrue(0.65 <= ratio <= 1.35, f"{code}: {LANGUAGES[code]['speakers']:.3g} vs {ref:.3g}")
+
+    def test_english_total_between_survey_and_ability_counts(self):
+        self.assertTrue(1.4e9 <= LANGUAGES["en"]["speakers"] <= 2.3e9, LANGUAGES["en"]["speakers"])
+
+    def test_dialect_counts_attached(self):
+        self.assertGreater(LANGUAGES["en"]["dialects"], 50)
+        # Glottolog files many varieties (Bavarian, Egyptian Arabic) as languages, not as dialects of the standard
+        self.assertGreater(sum(l.get("dialects", 0) for l in LANGUAGES.values()), 1500)
 
     def test_major_languages_have_family(self):
         expect = {"en": "Indo-European", "zh": "Sino-Tibetan", "ar": "Afro-Asiatic", "sw": "Atlantic-Congo", "ja": "Japonic"}
@@ -89,6 +99,66 @@ class TestLanguages(unittest.TestCase):
     def test_every_language_named(self):
         unnamed = [c for c, l in LANGUAGES.items() if not l["name"] or l["name"] == c]
         self.assertLess(len(unnamed), 0.05 * len(LANGUAGES), unnamed[:20])
+
+
+class TestSecondLanguages(unittest.TestCase):
+    """Session 2: Wikipedia L1+L2 tables fill second-language gaps that made reach show 0%."""
+
+    def share(self, iso2, code):
+        return next((l for l in COUNTRIES[iso2]["langs"] if l["code"] == code), None)
+
+    def test_known_gaps_filled(self):
+        for iso2, low in {"JP": 15, "NO": 70, "ID": 15, "UA": 30, "RU": 1}.items():
+            l = self.share(iso2, "en")
+            self.assertIsNotNone(l, f"{iso2} has no English figure")
+            self.assertGreaterEqual(l["pct"], low, iso2)
+
+    def test_wikipedia_never_lowers_a_cldr_share(self):
+        for iso2, c in COUNTRIES.items():
+            for l in c["langs"]:
+                if l.get("src") == "wikipedia" and l["cldr_pct"] is not None:
+                    self.assertGreater(l["pct"], l["cldr_pct"], f"{iso2}/{l['code']}")
+
+    def test_wikipedia_revisions_pinned(self):
+        for lang, w in META["wikipedia"].items():
+            self.assertIsInstance(w["revid"], int, lang)
+            self.assertGreater(w["countries"], 20, lang)
+
+    def test_wikipedia_parser_reads_country_rows_only(self):
+        import wikipedia
+        terr = json.loads((ROOT / "data" / "raw" / "cldr_territories_en.json").read_text(encoding="utf8"))
+        r = wikipedia.parse("de", terr["main"]["en"]["localeDisplayNames"]["territories"])
+        self.assertNotIn("England", r["shares"])  # sub-national rows skipped
+        self.assertGreater(r["shares"]["AT"], 80)
+
+
+class TestProjection(unittest.TestCase):
+    def test_years_extend_to_projection(self):
+        self.assertEqual(META["years"], [1960, 2026])
+        self.assertEqual(META["projected_from"], 2025)
+
+    def test_projection_continues_recent_trend(self):
+        for iso2 in ("IN", "NG", "JP", "US"):
+            pop = COUNTRIES[iso2]["pop"]
+            recent, projected = pop[64] / pop[59], pop[66] / pop[64]
+            self.assertAlmostEqual(projected, recent ** 0.4, places=3, msg=iso2)
+
+
+class TestGlottologIndex(unittest.TestCase):
+    INDEX = load("glottolog_index.json")
+    DIALECTS = load("dialects.json")
+
+    def test_index_covers_all_languages(self):
+        self.assertGreater(len(self.INDEX), 8500)
+
+    def test_dialects_point_at_indexed_languages(self):
+        missing = [g for g in self.DIALECTS if g not in self.INDEX]
+        self.assertEqual(missing, [])
+        self.assertGreater(sum(len(v) for v in self.DIALECTS.values()), 13000)
+
+    def test_dialect_counts_consistent(self):
+        for gid, e in self.INDEX.items():
+            self.assertEqual(e[7], len(self.DIALECTS.get(gid, [])), gid)
 
 
 class TestAnchors(unittest.TestCase):
@@ -120,7 +190,8 @@ class TestPipeline(unittest.TestCase):
         with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
             build.build(a)
             build.build(b)
-            for name in ("countries.json", "languages.json", "anchors.json", "glottolog_by_country.json"):
+            for name in ("countries.json", "languages.json", "anchors.json", "glottolog_by_country.json",
+                         "glottolog_index.json", "dialects.json"):
                 self.assertEqual((Path(a) / name).read_bytes(), (Path(b) / name).read_bytes(), name)
 
     def test_checked_in_output_matches_fresh_build(self):

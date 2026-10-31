@@ -53,16 +53,18 @@ export function multilingualIndex(langs) {
 
 // Chance that a random resident shares at least one language with the user.
 // estimate assumes independence; low = best single language; high = no overlap between speaker groups.
+// missing = the user's languages with no figure for this country: the estimate is then a lower bound.
 export function reachability(langs, mine) {
   const byCode = new Map(langs.map((l) => [l.code, l.pct / 100]));
   let none = 1, low = 0, high = 0, best = null;
+  const missing = mine.filter((m) => !byCode.has(m.code)).map((m) => m.code);
   for (const m of mine) {
     const p = Math.min(1, (byCode.get(m.code) || 0) * (LEVEL_WEIGHT[m.level] ?? 1));
     none *= 1 - p;
     high += p;
     if (p > low) { low = p; best = m.code; }
   }
-  return { estimate: 1 - none, low, high: Math.min(1, high), best };
+  return { estimate: 1 - none, low, high: Math.min(1, high), best, missing };
 }
 
 export function languageTotal(countries, code, year, anchorIdx) {
@@ -121,6 +123,29 @@ export function livingLanguagesAt(rows, year) {
     else if (last != null && last >= year) n++;
   }
   return n;
+}
+
+// Percent for display: never prints a non-zero share as "0%".
+export function formatPct(p) {
+  if (p == null) return "–";
+  if (p === 0) return "0%";
+  if (p < 0.01) return "<0.01%";
+  if (p < 1) return p.toFixed(2) + "%";
+  return (p >= 10 ? p.toFixed(0) : p.toFixed(1)) + "%";
+}
+
+// Search a list of {name} items: names starting with the query first, then names containing it.
+export function searchByName(items, query, limit = 40) {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const starts = [], contains = [];
+  for (const it of items) {
+    const n = it.name.toLowerCase();
+    if (n.startsWith(q)) starts.push(it);
+    else if (n.includes(q)) contains.push(it);
+    if (starts.length >= limit) break;
+  }
+  return starts.concat(contains).slice(0, limit);
 }
 
 export function formatCount(n) {

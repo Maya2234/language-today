@@ -34,12 +34,16 @@ const res = info.resources ?? [];
 const resHTML = res.length ? Object.entries(KINDS).map(([k, title]) => {
   const items = res.filter((r) => r.kind === k);
   return items.length ? `<h3>${title}</h3><ul class="reslist">${items.map((r) => `<li><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title)}<svg class="i"><use href="#i-ext"/></svg></a>${r.note ? `<span>${esc(r.note)}</span>` : ""}</li>`).join("")}</ul>` : "";
-}).join("") : `<p class="note">No free course found for ${esc(name)} in the sources searched (Duolingo, Live Lingua Project, Language Transfer, Wikibooks).</p>`;
+}).join("") : "";
+// The learning card only appears when there is a free course or textbook; other links move under the title.
+const hasCourse = res.some((r) => r.kind === "course" || r.kind === "textbook");
+const moreLinks = res.filter((r) => r.kind === "dictionary" || r.kind === "reference")
+  .map((r) => `<a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title.split(":")[0])}</a>`).join(" · ");
 
 const h = info.hello;
 const voices = () => ("speechSynthesis" in window ? speechSynthesis.getVoices() : []);
 const voiceFor = () => code && voices().find((v) => v.lang.toLowerCase().startsWith(code.toLowerCase()));
-const helloHTML = () => !h ? `<p class="note">Wiktionary lists no greeting for ${esc(name)} yet.</p>` : `<div class="hello big">
+const helloHTML = () => `<div class="hello big">
   <div><span class="hello-word">${esc(h.word)}</span>${h.translit ? `<span class="hello-tr">${esc(h.translit)}</span>` : ""}</div>
   <dl class="pron">
     ${h.translit ? `<div><dt>Say it like</dt><dd>${esc(h.translit)}</dd></div>` : ""}
@@ -54,11 +58,12 @@ $("#lang").innerHTML = `
   <section class="langhead">
     <h1>${esc(name)}</h1>
     <p class="sub">${esc([lang?.family ?? g?.[1], lang?.macroarea, (lang?.aes ?? g?.[4])?.replace(/_/g, " ")].filter(Boolean).join(" · "))}</p>
+    ${!hasCourse && moreLinks ? `<p class="morelinks">More about ${esc(name)}: ${moreLinks}</p>` : ""}
     ${kpis([[`Speakers, ${year}`, code ? L.formatCount(total.speakers) : "No estimate"], ["Countries", where.length || glottoCountries.length], ["Dialects", dl.length]])}
   </section>
   <div class="langgrid">
-    <section class="card"><h2>How to say hello</h2>${helloHTML()}</section>
-    <section class="card"><h2>Learn it for free</h2>${resHTML}<p class="note">Found by searching the course lists of Duolingo, Live Lingua Project, Language Transfer and Wikibooks, plus Wiktionary, Wikipedia and Glottolog. Links were checked when the data was built (${esc(meta.built_at.slice(0, 10))}).</p></section>
+    ${h ? `<section class="card${hasCourse ? "" : " wide"}"><h2>How to say hello</h2>${helloHTML()}</section>` : ""}
+    ${hasCourse ? `<section class="card${h ? "" : " wide"}"><h2>Learn it for free</h2>${resHTML}<p class="note">Found by searching the course lists of Duolingo, Live Lingua Project, Language Transfer and Wikibooks, plus Wiktionary, Wikipedia and Glottolog. Links were checked when the data was built (${esc(meta.built_at.slice(0, 10))}).</p></section>` : ""}
     <section class="card wide"><h2>Where it is spoken</h2><svg id="minimap" role="img" aria-label="Map of where ${esc(name)} is spoken"></svg>
       ${where.length ? rows(where.slice(0, 12).map((d) => ({ ...d, v: d.speakers })), where[0].speakers, { name: (d) => esc(countries[d.iso2].name), val: (d) => `<b>${L.formatCount(d.speakers)}</b> · ${L.formatPct(d.pct)}` })
         : glottoCountries.length ? `<p>${glottoCountries.map((c) => esc(countries[c].name)).join(", ")}</p><p class="note">Glottolog records where it is spoken but no speaker count.</p>` : ""}</section>

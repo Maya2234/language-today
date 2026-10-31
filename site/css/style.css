@@ -266,3 +266,5 @@ body.page { height: auto; }
 #minimap { width: 100%; display: block; margin: 12px 0; background: var(--ocean); border-radius: var(--radius-control); }
 .dialects { line-height: 1.8; }
 @media (max-width: 720px) { .langgrid { grid-template-columns: 1fr; } .langhead h1 { font-size: 26px; } .hello.big .hello-word { font-size: 32px; } }
+.morelinks { margin-top: 6px; color: var(--muted); font-size: var(--fs-small); }
+.morelinks a { color: var(--text); }

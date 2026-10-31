@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Language Today</title>
+<meta name="description" content="An interactive atlas of which languages are spoken where, by how many people, and how that changed since 1960.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>Language Today</h1>
+    <p>Who speaks what, where, and how it changed since 1960</p>
+  </div>
+  <nav class="modes" role="tablist" aria-label="Map layer">
+    <button role="tab" data-mode="languages" aria-selected="true">Languages</button>
+    <button role="tab" data-mode="multilingual">Multilingualism</button>
+    <button role="tab" data-mode="diversity">Diversity</button>
+    <button role="tab" data-mode="reach">Where can I talk?</button>
+  </nav>
+</header>
+
+<main class="layout">
+  <section class="mapwrap" aria-label="Map">
+    <div class="maptools">
+      <div class="seg" role="group" aria-label="Projection">
+        <button data-proj="globe" aria-pressed="true">Globe</button>
+        <button data-proj="flat" aria-pressed="false">Flat map</button>
+      </div>
+      <div id="modeControls"></div>
+    </div>
+    <svg id="map" role="img" aria-label="World map; click a country for details"></svg>
+    <div id="tooltip" class="tooltip" hidden></div>
+    <div id="legend" class="legend"></div>
+  </section>
+
+  <aside class="panel" id="panel" aria-live="polite"></aside>
+</main>
+
+<footer class="timebar">
+  <button id="play" class="play" aria-label="Play years">▶</button>
+  <label for="year" class="yearlabel">Year <output id="yearOut">2024</output></label>
+  <input id="year" type="range" min="1960" max="2024" step="1" value="2024">
+  <a class="about" href="#about" id="aboutLink">Data &amp; method</a>
+</footer>
+
+<dialog id="about">
+  <h2>Data &amp; method</h2>
+  <div id="aboutBody"></div>
+  <form method="dialog"><button>Close</button></form>
+</dialog>
+
+<datalist id="langList"></datalist>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

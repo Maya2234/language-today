@@ -1,0 +1,110 @@
+// Unit tests for site/js/logic.js. Run: node --test tests/js
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import * as L from "../../site/js/logic.js";
+
+const close = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} ≉ ${b}`);
+const anchors = { series: [{ country: "XX", lang: "aa", points: [[1980, 10], [2000, 30]] }] };
+const idx = L.indexAnchors(anchors);
+const pop = (n) => Array.from({ length: 65 }, () => n);
+const countries = {
+  XX: { pop: pop(1000), langs: [{ code: "aa", pct: 50 }, { code: "bb", pct: 80 }] },
+  YY: { pop: pop(500), langs: [{ code: "bb", pct: 100 }, { code: "cc", pct: 20 }] },
+};
+
+test("interpolate holds flat outside anchors and is linear inside", () => {
+  const pts = [[1980, 10], [2000, 30]];
+  assert.equal(L.interpolate(pts, 1960), 10);
+  assert.equal(L.interpolate(pts, 1990), 20);
+  assert.equal(L.interpolate(pts, 2024), 30);
+  assert.equal(L.interpolate([[2000, 5]], 1990), 5);
+});
+
+test("popAt clamps to the series", () => {
+  const c = { pop: Array.from({ length: 65 }, (_, i) => i) };
+  assert.equal(L.popAt(c, 1960), 0);
+  assert.equal(L.popAt(c, 1950), 0);
+  assert.equal(L.popAt(c, 2024), 64);
+  assert.equal(L.popAt(c, 2100), 64);
+});
+
+test("shareAt tags provenance: measured on anchor years, estimated between, derived without anchors", () => {
+  assert.equal(L.shareAt("XX", "aa", 50, 1980, idx).provenance, "measured");
+  const mid = L.shareAt("XX", "aa", 50, 1990, idx);
+  assert.equal(mid.provenance, "estimated");
+  assert.equal(mid.pct, 20);
+  const plain = L.shareAt("XX", "bb", 80, 1990, idx);
+  assert.deepEqual([plain.pct, plain.provenance], [80, "derived"]);
+});
+
+test("breakdown sorts by share and computes speakers", () => {
+  const b = L.breakdown("XX", countries.XX, 1990, idx);
+  assert.deepEqual(b.map((l) => l.code), ["bb", "aa"]);
+  assert.equal(b[0].speakers, 800);
+  assert.equal(b[1].speakers, 200);
+});
+
+test("multilingualIndex sums shares", () => {
+  close(L.multilingualIndex([{ pct: 100 }, { pct: 35 }]), 1.35);
+  assert.equal(L.multilingualIndex([]), 0);
+});
+
+test("reachability: single language equals its share", () => {
+  const r = L.reachability([{ code: "aa", pct: 50 }], [{ code: "aa", level: "native" }]);
+  close(r.estimate, 0.5);
+  assert.equal(r.best, "aa");
+});
+
+test("reachability: two languages combine under independence with bounds", () => {
+  const r = L.reachability([{ code: "aa", pct: 50 }, { code: "bb", pct: 50 }],
+    [{ code: "aa", level: "fluent" }, { code: "bb", level: "fluent" }]);
+  close(r.estimate, 0.75);
+  close(r.low, 0.5);
+  close(r.high, 1);
+});
+
+test("reachability: level weights and unknown languages", () => {
+  const r = L.reachability([{ code: "aa", pct: 100 }], [{ code: "aa", level: "basic" }, { code: "zz", level: "native" }]);
+  close(r.estimate, 0.4);
+  assert.equal(L.reachability([], [{ code: "aa", level: "native" }]).estimate, 0);
+});
+
+test("reachability: estimate always within [low, high]", () => {
+  const langs = [{ code: "a", pct: 70 }, { code: "b", pct: 40 }, { code: "c", pct: 90 }];
+  const mine = [{ code: "a", level: "conversational" }, { code: "b", level: "basic" }, { code: "c", level: "native" }];
+  const r = L.reachability(langs, mine);
+  assert.ok(r.low <= r.estimate + 1e-12 && r.estimate <= r.high + 1e-12);
+});
+
+test("languageTotal sums speakers across countries and ranks them", () => {
+  const t = L.languageTotal(countries, "bb", 2024, idx);
+  assert.equal(t.speakers, 1300);
+  assert.deepEqual(t.where.map((w) => w.iso2), ["XX", "YY"]);
+});
+
+test("topLanguages ranks by speakers and respects anchors", () => {
+  const top = L.topLanguages(countries, 2024, idx, 3);
+  assert.deepEqual(top.map((t) => t.code), ["bb", "aa", "cc"]);
+  assert.equal(top[1].speakers, 300); // anchored aa = 30% in 2024
+});
+
+test("regionSummary: second languages exclude each country's main language", () => {
+  const s = L.regionSummary(Object.entries(countries), 2024, idx);
+  assert.equal(s.pop, 1500);
+  assert.deepEqual(s.second.map((d) => d.code).sort(), ["aa", "cc"]);
+  close(s.index, (800 + 300 + 500 + 100) / 1500);
+});
+
+test("livingLanguagesAt counts extinct languages only up to their last documentation", () => {
+  const rows = [["A", "f", null, null], ["B", "f", "extinct", 1980], ["C", "f", "extinct", null], ["D", "f", "moribund", null]];
+  assert.equal(L.livingLanguagesAt(rows, 1970), 3);
+  assert.equal(L.livingLanguagesAt(rows, 1980), 3);
+  assert.equal(L.livingLanguagesAt(rows, 1981), 2);
+});
+
+test("formatCount", () => {
+  assert.equal(L.formatCount(1.734e9), "1.73 B");
+  assert.equal(L.formatCount(276e6), "276 M");
+  assert.equal(L.formatCount(16.04e6), "16.0 M");
+  assert.equal(L.formatCount(950), "950");
+});

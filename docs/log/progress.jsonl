@@ -1,0 +1,5 @@
+{"timestamp": "2026-10-30T20:30:00-07:00", "phase": "setup", "actor": "claude", "summary": "Probed open data sources (CLDR, World Bank, Glottolog, world-atlas); wrote CLAUDE.md, specs/00-project.md, specs/01-data.md"}
+{"timestamp": "2026-10-30T20:41:00-07:00", "phase": "1-data", "actor": "claude", "summary": "pipeline/fetch.py + build.py + historical_anchors.json; 250 countries, 680 languages"}
+{"timestamp": "2026-10-30T20:45:00-07:00", "phase": "2-atlas", "actor": "claude", "summary": "site/ atlas: globe+flat map, 4 layers, year slider, panels; browser-checked all 4 modes, fixed syntax error, grouped Arabic varieties for colouring, dropped CLDR placeholder codes"}
+{"timestamp": "2026-10-30T20:48:39-07:00", "phase": "validation", "actor": "claude", "summary": "30/30 tests pass (run 20261030T204839); corrected one wrong test assumption (Mexico Spanish share: CLDR says 83%, not >90%)"}
+{"timestamp": "2026-10-30T20:50:00-07:00", "phase": "docs", "actor": "claude", "summary": "Logs, STATUS.md, README, git init (no remote yet)"}

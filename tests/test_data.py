@@ -203,3 +203,72 @@ class TestPipeline(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestRegions(unittest.TestCase):
+    """Session 3: Natural Earth admin-1 regions with Glottolog languages and regional shares."""
+    INDEX = load("regions_index.json")
+
+    def regions(self, iso2):
+        return load(f"regions/{iso2}.json")
+
+    def test_major_countries_have_regions(self):
+        for iso2 in ("US", "ES", "IT", "IN", "FR", "GB", "CN", "BR"):
+            self.assertGreater(self.INDEX[iso2]["regions"], 10, iso2)
+
+    def test_every_curated_share_lands_on_a_region(self):
+        curated = json.loads((ROOT / "pipeline" / "regional_shares.json").read_text(encoding="utf8"))["series"]
+        unmatched = META["regions"]["unmatched_shares"]
+        for s in curated:
+            self.assertNotIn(f"{s['country']}/{s['region']}", unmatched)
+
+    def test_known_regions(self):
+        es = {r["name"]: r for r in self.regions("ES")}
+        self.assertEqual([(s["lang"], s["pct"]) for s in es["Barcelona"]["shares"]], [("ca", 81.2)])
+        self.assertIn("eu", [s["lang"] for s in es["Gipuzkoa"]["shares"]])
+        gindex = load("glottolog_index.json")
+        sicily = {gindex[g][0] for r in self.regions("IT") if r["parent"] == "Sicily" for g in r["langs"]}
+        self.assertIn("Sicilian", sicily)
+
+    def test_shares_in_range_and_sourced(self):
+        for iso2 in self.INDEX:
+            for r in self.regions(iso2):
+                for s in r["shares"]:
+                    self.assertTrue(0 <= s["pct"] <= 100, f"{iso2}/{r['name']}")
+                    self.assertTrue(s["source"] and s["metric"], f"{iso2}/{r['name']}")
+
+    def test_rings_closed_and_wound_for_d3(self):
+        import regions as admin1
+        for iso2 in ("ES", "US", "ID"):
+            for r in self.regions(iso2):
+                for poly in r["geom"]:
+                    for i, ring in enumerate(poly):
+                        self.assertEqual(ring[0], ring[-1], r["name"])
+                        self.assertEqual(admin1.area(ring) < 0, i == 0, f"{r['name']} ring {i} winding")
+
+
+class TestNamingAndLearning(unittest.TestCase):
+    def test_israel_shown_as_occupied_palestine(self):
+        self.assertEqual(COUNTRIES["IL"]["name"], "Occupied Palestine")
+        self.assertEqual(META["naming"]["IL"]["sources"], "Israel")
+        self.assertEqual(COUNTRIES["PS"]["name"], "Palestinian Territories")
+
+    def test_learning_links_are_https_and_typed(self):
+        learn = load("learn.json")
+        self.assertGreater(len(learn), 150)
+        for code, e in learn.items():
+            for r in e["resources"]:
+                self.assertTrue(r["url"].startswith("https://"), r["url"])
+                self.assertIn(r["kind"], ("course", "textbook", "dictionary", "reference"))
+            h = e.get("hello")
+            if h:
+                self.assertTrue(h["word"], code)
+                if "audio" in h:
+                    self.assertTrue(h["audio"].startswith("https://upload.wikimedia.org/"), h["audio"])
+
+    def test_known_free_courses_found(self):
+        learn = load("learn.json")
+        titles = lambda c: " ".join(r["title"] for r in learn[c]["resources"])
+        self.assertIn("Duolingo", titles("es"))
+        self.assertIn("Language Transfer", titles("sw"))
+        self.assertIn("Live Lingua", titles("am"))

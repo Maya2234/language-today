@@ -5,6 +5,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+import learn
+import regions as admin1
 import wikipedia
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -15,6 +17,8 @@ YEAR0, WB_LAST, YEAR1 = 1960, 2024, 2026  # years after WB_LAST are projected
 REGIONS = {"002": "Africa", "019": "Americas", "142": "Asia", "150": "Europe", "009": "Oceania"}
 ENDANGERED = {"aes-threatened", "aes-shifting", "aes-moribund", "aes-nearly_extinct"}
 OFFICIAL = {"official", "de_facto_official"}
+# Display names chosen by the project owner where they differ from the sources (noted in meta.naming).
+NAME_OVERRIDES = {"IL": "Occupied Palestine"}
 
 
 def load(name):
@@ -87,7 +91,7 @@ def glottolog(alias_to_cldr):
         if r["Level"] != "language":
             continue
         status = aes.get(r["ID"], "")
-        family = names.get(r["Family_ID"], "Isolate" if r["Is_Isolate"] == "True" else "Unclassified")
+        family = names.get(r["Family_ID"], "Isolate" if r["Is_Isolate"].lower() == "true" else "Unclassified")
         last = int(r["Last_Year_Of_Documentation"]) if r["Last_Year_Of_Documentation"] else None
         rec = {
             "glottocode": r["ID"], "name": r["Name"], "family": family, "macroarea": r["Macroarea"],
@@ -181,7 +185,7 @@ def build(out=OUT):
         gl = gl_country.get(iso2, [])
         region, sub = regions.get(iso2, (None, None))
         countries[iso2] = {
-            "name": terr_names.get(iso2, iso2), "numeric": cm["_numeric"], "iso3": cm.get("_alpha3"),
+            "name": NAME_OVERRIDES.get(iso2, terr_names.get(iso2, iso2)), "numeric": cm["_numeric"], "iso3": cm.get("_alpha3"),
             "region": region, "subregion": sub, "pop": pop, "pop_source": pop_source,
             "literacy": float(t["_literacyPercent"]) if "_literacyPercent" in t else None,
             "langs": langs,
@@ -241,8 +245,24 @@ def build(out=OUT):
     dump("glottolog_by_country.json", dict(sorted(gl_country.items())))
     dump("glottolog_index.json", gl_index)
     dump("dialects.json", gl_dialects)
+    territories = [t for w in wiki.values() for t in w["territories"]]
+    regs, unmatched_regions = admin1.build(gl_index, territories, gl_dialects)
+    rdir = out / "regions"
+    rdir.mkdir(exist_ok=True)
+    for iso2, recs in regs.items():
+        dump(f"regions/{iso2}.json", recs)
+    dump("regions_index.json", {iso2: {"regions": len(r), "with_shares": sum(1 for x in r if x["shares"])} for iso2, r in regs.items()})
+    meta["regions"] = {"source": "Natural Earth 10m admin-1 v5.1.2, simplified (Douglas-Peucker 0.02°)",
+                       "countries": len(regs), "regions": sum(len(r) for r in regs.values()),
+                       "with_shares": sum(1 for r in regs.values() for x in r if x["shares"]),
+                       "unmatched_shares": unmatched_regions}
+    meta["naming"] = {iso2: {"shown": name, "sources": terr_names.get(iso2)} for iso2, name in NAME_OVERRIDES.items()}
+    learn_data = learn.build(languages, gl_index, alias_to_cldr)
+    if learn_data is not None:
+        dump("learn.json", learn_data["by_code"])
+        meta["learn"] = learn_data["summary"]
     dump("meta.json", meta)
-    (out / "countries-110m.json").write_bytes((RAW / "countries-110m.json").read_bytes())
+    (out / "countries-50m.json").write_bytes((RAW / "countries-50m.json").read_bytes())
     return countries, languages, meta
 
 

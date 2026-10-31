@@ -57,10 +57,20 @@ def cells(row):
 def parse(lang, territory_names):
     page = json.loads((RAW / f"wikipedia_{lang}.json").read_text(encoding="utf8"))["parse"]
     idx = name_index(territory_names)
-    found, unmatched = {}, set()
+    found, unmatched, territories = {}, set(), []
     for table in re.findall(r'<table class="wikitable[^"]*".*?</table>', page["text"], re.S):
         rows = re.findall(r"<tr.*?</tr>", table, re.S)
-        if not rows or (cells(rows[0]) or [""])[0].lower().startswith("territory"):
+        if not rows:
+            continue
+        if (cells(rows[0]) or [""])[0].lower().startswith("territory"):  # sub-national: territory, country, ..., %
+            for row in rows[1:]:
+                cs = cells(row)
+                pct = next((float(m.group(1)) for c in cs[2:] if (m := re.fullmatch(r"([\d.]+)\s*%", c))), None)
+                year = next((int(c) for c in cs[2:] if re.fullmatch(r"(19|20)\d\d", c)), None)
+                if len(cs) > 2 and pct is not None and norm(cs[1]) in idx:
+                    territories.append({"territory": re.sub(r"\[.*?\]", "", cs[0]).strip(), "country": idx[norm(cs[1])],
+                                        "lang": lang, "pct": min(100.0, pct), "year": year,
+                                        "title": page["title"], "revid": page["revid"]})
             continue
         for row in rows[1:]:
             cs = cells(row)
@@ -71,4 +81,4 @@ def parse(lang, territory_names):
             elif pct is not None and not code and cs and cs[0] and not cs[0][0].isdigit():
                 unmatched.add(cs[0])
     return {"revid": page["revid"], "title": page["title"], "shares": dict(sorted(found.items())),
-            "unmatched": sorted(unmatched)}
+            "unmatched": sorted(unmatched), "territories": territories}

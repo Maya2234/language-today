@@ -2,3 +2,5 @@ data/raw/
 __pycache__/
 *.pyc
 .taste-skill/inspect/
+data/raw/scrape/cache/
+.taste-skill/inspect-lang/

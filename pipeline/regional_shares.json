@@ -1,0 +1,255 @@
+{
+  "_note": "Sub-national language shares, compiled by Claude from the cited surveys and censuses and NOT yet independently verified. 'region' must match a Natural Earth admin-1 name (name or name_en) inside 'country'. Values are percent of the region's population.",
+  "series": [
+    {
+      "country": "GB",
+      "region": "Wales",
+      "lang": "cy",
+      "pct": 17.8,
+      "year": 2021,
+      "metric": "can speak Welsh, age 3+",
+      "source": "ONS Census 2021",
+      "confidence": "high"
+    },
+    {
+      "country": "GB",
+      "region": "Scotland",
+      "lang": "gd",
+      "pct": 2.5,
+      "year": 2022,
+      "metric": "some Gaelic skills, age 3+",
+      "source": "Scotland's Census 2022",
+      "confidence": "medium"
+    },
+    {
+      "country": "GB",
+      "region": "Northern Ireland",
+      "lang": "ga",
+      "pct": 12.4,
+      "year": 2021,
+      "metric": "some ability in Irish",
+      "source": "NISRA Census 2021",
+      "confidence": "medium"
+    },
+    {
+      "country": "ES",
+      "region": "Cataluña",
+      "lang": "ca",
+      "pct": 81.2,
+      "year": 2018,
+      "metric": "can speak Catalan",
+      "source": "Enquesta d'usos lingüístics de la població 2018 (Idescat)",
+      "confidence": "high"
+    },
+    {
+      "country": "ES",
+      "region": "Valencia",
+      "lang": "ca",
+      "pct": 51.0,
+      "year": 2021,
+      "metric": "can speak Valencian",
+      "source": "Generalitat Valenciana sociolinguistic survey 2021",
+      "confidence": "low"
+    },
+    {
+      "country": "ES",
+      "region": "Islas Baleares",
+      "lang": "ca",
+      "pct": 64.0,
+      "year": 2014,
+      "metric": "can speak Catalan",
+      "source": "Enquesta d'usos lingüístics a les Illes Balears 2014",
+      "confidence": "low"
+    },
+    {
+      "country": "ES",
+      "region": "País Vasco",
+      "lang": "eu",
+      "pct": 36.2,
+      "year": 2021,
+      "metric": "Basque speakers (bilingual), age 16+",
+      "source": "VII Encuesta Sociolingüística 2021 (Basque Government)",
+      "confidence": "high"
+    },
+    {
+      "country": "ES",
+      "region": "Navarra",
+      "lang": "eu",
+      "pct": 14.1,
+      "year": 2021,
+      "metric": "Basque speakers (bilingual), age 16+",
+      "source": "VII Encuesta Sociolingüística 2021",
+      "confidence": "medium"
+    },
+    {
+      "country": "ES",
+      "region": "Galicia",
+      "lang": "gl",
+      "pct": 88.0,
+      "year": 2018,
+      "metric": "can speak Galician",
+      "source": "Instituto Galego de Estatística, 2018",
+      "confidence": "low"
+    },
+    {
+      "country": "FR",
+      "region": "Bretagne",
+      "lang": "br",
+      "pct": 5.5,
+      "year": 2018,
+      "metric": "speak Breton",
+      "source": "TMO Régions survey 2018",
+      "confidence": "low"
+    },
+    {
+      "country": "FR",
+      "region": "Corse",
+      "lang": "co",
+      "pct": 28.0,
+      "year": 2013,
+      "metric": "speak Corsican well",
+      "source": "Collectivité de Corse sociolinguistic survey 2013",
+      "confidence": "low"
+    },
+    {
+      "country": "IT",
+      "region": "Sardegna",
+      "lang": "sc",
+      "pct": 68.4,
+      "year": 2007,
+      "metric": "can speak Sardinian",
+      "source": "Oppo, Le lingue dei sardi (2007)",
+      "confidence": "low"
+    },
+    {
+      "country": "IT",
+      "region": "Trentino-Alto Adige",
+      "lang": "de",
+      "pct": 31.0,
+      "year": 2011,
+      "metric": "German language group (South Tyrol 69.4% of a region of ~1.03 M)",
+      "source": "ASTAT census 2011",
+      "confidence": "low"
+    },
+    {
+      "country": "NL",
+      "region": "Friesland",
+      "lang": "fy",
+      "pct": 64.0,
+      "year": 2020,
+      "metric": "can speak West Frisian",
+      "source": "Provinsje Fryslân, De Fryske taalatlas 2020",
+      "confidence": "low"
+    },
+    {
+      "country": "CA",
+      "region": "Québec",
+      "lang": "fr",
+      "pct": 93.7,
+      "year": 2021,
+      "metric": "can conduct a conversation in French",
+      "source": "Statistics Canada Census 2021",
+      "confidence": "high"
+    },
+    {
+      "country": "US",
+      "region": "Texas",
+      "lang": "es",
+      "pct": 29.1,
+      "year": 2019,
+      "metric": "speak Spanish at home, age 5+",
+      "source": "American Community Survey 2019",
+      "confidence": "medium"
+    },
+    {
+      "country": "US",
+      "region": "California",
+      "lang": "es",
+      "pct": 28.3,
+      "year": 2019,
+      "metric": "speak Spanish at home, age 5+",
+      "source": "American Community Survey 2019",
+      "confidence": "medium"
+    },
+    {
+      "country": "US",
+      "region": "Hawaii",
+      "lang": "haw",
+      "pct": 0.1,
+      "year": 2019,
+      "metric": "speak Hawaiian at home, age 5+",
+      "source": "American Community Survey 2015-2019",
+      "confidence": "low"
+    },
+    {
+      "country": "IN",
+      "region": "West Bengal",
+      "lang": "bn",
+      "pct": 86.2,
+      "year": 2011,
+      "metric": "Bengali mother tongue",
+      "source": "Census of India 2011, C-16",
+      "confidence": "medium"
+    },
+    {
+      "country": "IN",
+      "region": "Tamil Nadu",
+      "lang": "ta",
+      "pct": 88.4,
+      "year": 2011,
+      "metric": "Tamil mother tongue",
+      "source": "Census of India 2011, C-16",
+      "confidence": "medium"
+    },
+    {
+      "country": "IN",
+      "region": "Kerala",
+      "lang": "ml",
+      "pct": 97.0,
+      "year": 2011,
+      "metric": "Malayalam mother tongue",
+      "source": "Census of India 2011, C-16",
+      "confidence": "medium"
+    },
+    {
+      "country": "IN",
+      "region": "Karnataka",
+      "lang": "kn",
+      "pct": 66.5,
+      "year": 2011,
+      "metric": "Kannada mother tongue",
+      "source": "Census of India 2011, C-16",
+      "confidence": "medium"
+    },
+    {
+      "country": "IN",
+      "region": "Maharashtra",
+      "lang": "mr",
+      "pct": 69.9,
+      "year": 2011,
+      "metric": "Marathi mother tongue",
+      "source": "Census of India 2011, C-16",
+      "confidence": "medium"
+    },
+    {
+      "country": "IN",
+      "region": "Gujarat",
+      "lang": "gu",
+      "pct": 86.0,
+      "year": 2011,
+      "metric": "Gujarati mother tongue",
+      "source": "Census of India 2011, C-16",
+      "confidence": "medium"
+    },
+    {
+      "country": "IN",
+      "region": "Punjab",
+      "lang": "pa",
+      "pct": 89.8,
+      "year": 2011,
+      "metric": "Punjabi mother tongue",
+      "source": "Census of India 2011, C-16",
+      "confidence": "low"
+    }
+  ]
+}

@@ -26,6 +26,8 @@ SOURCES = {
     **{f"wikipedia_{lang}.json": "https://en.wikipedia.org/w/api.php?action=parse&format=json&formatversion=2"
        f"&prop=text|revid&oldid={rev}" for lang, (_, rev) in WIKIPEDIA.items()},
     "countries-110m.json": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json",
+    "countries-50m.json": "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json",
+    "ne_10m_admin1.geojson": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_admin_1_states_provinces.geojson",
 }
 
 

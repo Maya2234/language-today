@@ -11,14 +11,16 @@ const store = {
 
 const load = (f) => fetch(`data/${f}`).then((r) => r.json());
 const [world, countries, languages, anchors, meta] = await Promise.all(
-  ["countries-110m.json", "countries.json", "languages.json", "anchors.json", "meta.json"].map(load));
+  ["countries-50m.json", "countries.json", "languages.json", "anchors.json", "meta.json"].map(load));
 const lazy = (f) => { let p; return () => (p ??= load(f)); };
-const loaders = { glot: lazy("glottolog_by_country.json"), gindex: lazy("glottolog_index.json"), dialects: lazy("dialects.json") };
+const loaders = { glot: lazy("glottolog_by_country.json"), gindex: lazy("glottolog_index.json"), dialects: lazy("dialects.json"), learn: lazy("learn.json") };
+const regionFiles = {};
+const loadRegions = (iso2) => (regionFiles[iso2] ??= fetch(`data/regions/${iso2}.json`).then((r) => (r.ok ? r.json() : [])).catch(() => []));
 const cache = {};  // resolved lazy files, for synchronous use after loading
 const need = (...names) => Promise.all(names.map(async (n) => (cache[n] ??= await loaders[n]())));
 
 const LAST = meta.years[1], PROJ = meta.projected_from;
-const state = { mode: "languages", proj: "flat", year: LAST, lang: null, selected: null, mine: store.get("lt.mine", []) };
+const state = { mode: "languages", proj: "flat", year: LAST, lang: null, selected: null, region: null, regions: [], mine: store.get("lt.mine", []) };
 const anchorIdx = L.indexAnchors(anchors);
 const lname = (code) => languages[code]?.name ?? code;
 const byNumeric = new Map(Object.entries(countries).map(([iso2, c]) => [c.numeric, iso2]));
@@ -63,7 +65,9 @@ const svg = d3.select("#map");
 const gRoot = svg.append("g");
 const sphere = gRoot.append("path").attr("class", "sphere").datum({ type: "Sphere" });
 const grat = gRoot.append("path").attr("class", "graticule").datum(d3.geoGraticule10());
+const coast = gRoot.append("path").attr("class", "coast").datum(topojson.merge(world, world.objects.countries.geometries.filter((g) => byNumeric.get(String(g.id)) !== "AQ")));
 const paths = gRoot.selectAll("path.country").data(land.features).join("path").attr("class", "country").attr("vector-effect", "non-scaling-stroke");
+const gRegions = gRoot.append("g");
 const gPts = gRoot.append("g");
 let projection, path, baseScale, rot = [-15, -25], last = d3.zoomIdentity, resetting = false, points = [];
 
@@ -89,7 +93,9 @@ function setupProjection() {
 function draw() {
   sphere.attr("d", path);
   grat.attr("d", path);
+  coast.attr("d", path);
   paths.attr("d", path);
+  gRegions.selectAll("path").attr("d", path);
   drawPoints();
 }
 function drawPoints() {
@@ -118,6 +124,24 @@ new ResizeObserver(() => setupProjection()).observe(svg.node());
 $("#zoomIn").addEventListener("click", () => svg.transition().duration(250).call(zoom.scaleBy, 1.6));
 $("#zoomOut").addEventListener("click", () => svg.transition().duration(250).call(zoom.scaleBy, 1 / 1.6));
 $("#zoomReset").addEventListener("click", () => { rot = [-15, -25]; setupProjection(); });
+
+// Center the map on a feature: zoom to its bounds on the flat map, rotate to it on the globe.
+function centerOn(feature) {
+  const { width: w, height: h } = svg.node().getBoundingClientRect();
+  if (state.proj === "flat") {
+    const [[x0, y0], [x1, y1]] = path.bounds(feature);
+    const k = Math.max(1, Math.min(10, 0.75 / Math.max((x1 - x0) / w, (y1 - y0) / h)));
+    svg.transition().duration(650).call(zoom.transform, d3.zoomIdentity.translate(w / 2, h / 2).scale(k).translate(-(x0 + x1) / 2, -(y0 + y1) / 2));
+    return;
+  }
+  const [lon, lat] = d3.geoCentroid(feature);
+  const from = [...rot], to = [-lon, Math.max(-75, Math.min(75, -lat))];
+  d3.transition().duration(650).tween("rotate", () => (t) => {
+    rot = d3.interpolate(from, to)(t);
+    projection.rotate(rot);
+    draw();
+  });
+}
 
 // ---------- layers ----------
 function layer() {
@@ -160,6 +184,7 @@ function recolor() {
   const sc = scaleForMode();
   paths.attr("fill", (f) => { const v = current.get(f.iso2); return v == null ? css("--nodata") : sc(v); })
     .classed("selected", (f) => f.iso2 && f.iso2 === state.selected);
+  gRegions.selectAll("path").attr("fill", (f) => regionFill(f.properties));
   renderLegend();
 }
 
@@ -210,17 +235,8 @@ function tooltipHTML(iso2) {
     ${list || `<div class="tt-sub">No language shares recorded</div>`}
     <div class="tt-foot">${b.length > 7 ? `+${b.length - 7} more with shares · ` : ""}${c.glottolog.count} languages in Glottolog</div>`;
 }
-paths.on("pointermove", (e, f) => {
-  if (!countries[f.iso2]) return;
-  const box = $(".mapcard");
-  const [x, y] = d3.pointer(e, box);
-  tip.hidden = false;
-  tip.innerHTML = tooltipHTML(f.iso2);
-  const tw = tip.offsetWidth, th = tip.offsetHeight;
-  tip.style.left = (x + 16 + tw > box.clientWidth ? x - tw - 12 : x + 16) + "px";
-  tip.style.top = Math.max(8, Math.min(y + 12, box.clientHeight - th - 8)) + "px";
-}).on("pointerleave", () => (tip.hidden = true))
-  .on("click", (e, f) => { if (countries[f.iso2]) select(f.iso2); });
+paths.on("pointermove", (e, f) => { if (countries[f.iso2]) showTip(e, tooltipHTML(f.iso2)); }).on("pointerleave", () => (tip.hidden = true))
+  .on("click", (e, f) => { if (countries[f.iso2]) select(f.iso2, { center: true }); });
 
 // ---------- charts ----------
 const years = () => d3.range(L.YEAR0, LAST + 1);
@@ -254,10 +270,14 @@ const officialLabel = { official: "official", de_facto_official: "official", off
 // ---------- panels ----------
 async function renderPanel() {
   const el = $("#panel");
-  el.innerHTML = state.selected ? await countryPanel(state.selected) : await overviewPanel();
+  const region = state.region && state.regions.find((r) => r.id === state.region);
+  el.innerHTML = region ? regionPanel(region) : state.selected ? await countryPanel(state.selected) : await overviewPanel();
   el.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.lang)));
-  el.querySelectorAll("[data-country]").forEach((b) => b.addEventListener("click", () => select(b.dataset.country)));
-  el.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", () => (b.dataset.back === "lang" ? setLang(null) : select(null))));
+  el.querySelectorAll("[data-country]").forEach((b) => b.addEventListener("click", () => select(b.dataset.country, { center: true })));
+  el.querySelectorAll("[data-region]").forEach((b) => b.addEventListener("click", () => selectRegion(b.dataset.region)));
+  el.querySelectorAll("[data-hello]").forEach((b) => b.addEventListener("click", () => sayHello(b.dataset.hello)));
+  el.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", () =>
+    (b.dataset.back === "lang" ? setLang(null) : b.dataset.back === "country" ? selectRegion(null) : select(null))));
   el.querySelectorAll(".filter").forEach((f) => f.addEventListener("input", () => {
     const q = f.value.toLowerCase();
     f.parentElement.querySelectorAll("tbody tr, li").forEach((tr) => (tr.hidden = !tr.textContent.toLowerCase().includes(q)));
@@ -265,7 +285,7 @@ async function renderPanel() {
 }
 
 async function countryPanel(iso2) {
-  await need("glot");
+  await need("glot", "gindex");
   const c = countries[iso2], y = state.year;
   const b = L.breakdown(iso2, c, y, anchorIdx);
   const gl = cache.glot[iso2] ?? [];
@@ -302,6 +322,9 @@ async function countryPanel(iso2) {
     html += `<h3>Second languages in ${esc(c.subregion)}</h3><p class="note" style="margin:0 0 6px">${reg.index.toFixed(2)} languages per person across the subregion.</p>
       ${rows(reg.second.slice(0, 6).map((d) => ({ ...d, v: d.speakers })), reg.second[0]?.speakers || 1, { name: (d) => langBtn(d.code), val: (d) => L.formatCount(d.speakers) })}`;
   }
+  const withData = state.regions.filter((r) => r.shares.length);
+  if (state.regions.length) html += `<h3>Regions</h3><p class="note" style="margin:0 0 6px">${state.regions.length} regions on the map. Hover one for its languages and dialects; click for detail.${withData.length ? " Regions with their own survey figures:" : ""}</p>
+    ${withData.length ? `<p>${[...new Map(withData.map((r) => [r.shares[0].region, r])).values()].map((r) => `<button class="linkish" data-region="${esc(r.id)}">${esc(r.shares[0].region)}</button>`).join(", ")}</p>` : ""}`;
   if (lost.length) html += `<h3>Languages lost since 1960</h3><p>${lost.map((g) => `${esc(g[0])} <span class="note">(${g[3]})</span>`).join(", ")}</p>`;
   if (gl.length) html += `<h3>All ${gl.length} languages and ${nDialects} dialects recorded here</h3><details><summary>Show the Glottolog list</summary>
     <input class="filter" type="search" placeholder="Filter by name, family or status" aria-label="Filter languages">
@@ -361,6 +384,7 @@ function languagePanel(code) {
   return `<button class="btn ghost back" data-back="lang">${icon("back")}All languages</button>
     <h2>${esc(lname(code))}</h2><p class="sub">${esc([l.family, l.macroarea, l.aes?.replace(/_/g, " ")].filter(Boolean).join(" · ") || "Family not recorded")}</p>
     ${kpis([[`Speakers, ${y}`, L.formatCount(t.speakers)], ["Countries", t.where.filter((d) => d.speakers >= 1).length], ["Dialects", l.dialects ?? "–"]])}${projectedNote()}
+    ${helloCard(code)}${pageLink(code)}
     <h3>Speakers, 1960–${LAST}</h3>${trendChart(series, { fmt: (v) => L.formatCount(v).replace(" ", "") })}
     <p class="note">Change mostly follows population; a language’s share only moves where census data exists. Dashed: projected.</p>
     <h3>Where speakers live</h3>${rows(top, top[0]?.v || 1, { name: (d) => countryBtn(d.iso2), val: (d) => `<b>${L.formatCount(d.speakers)}</b> · ${L.formatPct(d.pct)}` })}
@@ -375,6 +399,7 @@ function glottoPanel(id) {
   return `<button class="btn ghost back" data-back="lang">${icon("back")}All languages</button>
     <h2>${esc(name)}</h2><p class="sub">${esc([family, aes?.replace(/_/g, " ")].filter(Boolean).join(" · "))}</p>
     ${kpis([["Countries", cs.length], ["Dialects", nd], ["Status", esc(aes?.replace(/_/g, " ") ?? "–")]])}
+    ${e[6] ? helloCard(e[6]) : ""}${pageLink(e[6] && languages[e[6]] ? e[6] : "g:" + id)}
     <p class="note">Glottolog records where this language is spoken but no speaker count, so it has no share on the map. Red dot: its location; dark dots: its dialects.</p>
     <h3>Spoken in</h3>${cs.length ? `<p>${cs.map(countryBtn).join(", ")}</p>` : `<p class="note">No country recorded.</p>`}
     ${dialectList(cache.dialects?.[id] ?? [])}`;
@@ -489,13 +514,116 @@ async function updatePoints() {
   drawPoints();
 }
 
+// ---------- sub-national regions (shown for the selected country) ----------
+const regionFeature = (r) => ({ type: "Feature", id: r.id, properties: r, geometry: { type: "MultiPolygon", coordinates: r.geom } });
+function regionFill(r) {
+  const own = r.shares;
+  if (state.mode === "languages" && !state.lang && own.length) return langColor(d3.greatest(own, (x) => x.pct).lang);
+  if (state.mode === "languages" && state.lang && !isGlotto(state.lang)) {
+    const x = own.find((x) => x.lang === state.lang);
+    if (x) return seq([0, 100], RAMPS.languages, "sqrt")(x.pct);
+  }
+  const v = current.get(state.selected);
+  return v == null ? css("--nodata") : scaleForMode()(v);
+}
+function drawRegions() {
+  gRegions.selectAll("path").data(state.regions.map(regionFeature), (f) => f.id).join("path")
+    .attr("class", (f) => `region${f.id === state.region ? " selected" : ""}${f.properties.shares.length ? " has-data" : ""}`)
+    .attr("vector-effect", "non-scaling-stroke").attr("d", path).attr("fill", (f) => regionFill(f.properties))
+    .on("pointermove", (e, f) => showTip(e, regionTooltipHTML(f.properties)))
+    .on("pointerleave", () => (tip.hidden = true))
+    .on("click", (e, f) => selectRegion(f.id));
+}
+// Languages and dialects Glottolog places anywhere in the region's parent area (e.g. all provinces of Sicily).
+function pooled(r) {
+  const group = r.parent ? state.regions.filter((x) => x.parent === r.parent) : [r];
+  const langs = [...new Set(group.flatMap((x) => x.langs))].map((g) => [g, cache.gindex?.[g]]).filter(([, e]) => e)
+    .sort((a, b) => (a[1][4] === "extinct") - (b[1][4] === "extinct") || a[1][0].localeCompare(b[1][0]));
+  const dialects = [...new Map(group.flatMap((x) => x.dialects).map((d) => [d[0], d])).values()].sort((a, b) => a[0].localeCompare(b[0]));
+  return { area: r.parent ?? r.name, langs, dialects };
+}
+function regionTooltipHTML(r) {
+  const c = countries[state.selected], pl = pooled(r);
+  const shares = r.shares.map((x) => `<div class="tt-row"><span>${esc(lname(x.lang))}</span><span>${L.formatPct(x.pct)}</span>
+    <span class="tt-bar"><i style="width:${Math.max(1, x.pct)}%;background:${langColor(x.lang)}"></i></span></div>`).join("");
+  const located = pl.langs.slice(0, 8).map(([, e]) => esc(e[0]) + (e[4] === "extinct" ? " †" : "")).join(", ");
+  const country = L.breakdown(state.selected, c, state.year, anchorIdx).slice(0, 3).map((l) => `${esc(lname(l.code))} ${L.formatPct(l.pct)}`).join(" · ");
+  return `<div class="tt-head"><span>${esc(r.name)}</span></div>
+    <div class="tt-sub">${esc([r.type, r.parent && r.parent !== r.name ? r.parent : r.unit, c.name].filter(Boolean).join(" · "))}</div>
+    ${shares ? `<div class="tt-key">Regional figures</div>${shares}` : ""}
+    ${located ? `<div class="tt-foot tt-strong">Languages located in ${esc(pl.area)}: ${located}${pl.langs.length > 8 ? ` +${pl.langs.length - 8}` : ""}</div>` : ""}
+    ${pl.dialects.length ? `<div class="tt-foot">Dialects here: ${pl.dialects.slice(0, 6).map((d) => esc(d[0])).join(", ")}${pl.dialects.length > 6 ? ` +${pl.dialects.length - 6}` : ""}</div>` : ""}
+    <div class="tt-foot">Country-wide: ${country || "no shares"}</div>`;
+}
+function showTip(e, html) {
+  const box = $(".mapcard");
+  const [x, y] = d3.pointer(e, box);
+  tip.hidden = false;
+  tip.innerHTML = html;
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  tip.style.left = (x + 16 + tw > box.clientWidth ? x - tw - 12 : x + 16) + "px";
+  tip.style.top = Math.max(8, Math.min(y + 12, box.clientHeight - th - 8)) + "px";
+}
+function selectRegion(id) {
+  state.region = id;
+  gRegions.selectAll("path").classed("selected", (f) => f.id === id);
+  if (id) centerOn(regionFeature(state.regions.find((r) => r.id === id)));
+  renderPanel();
+}
+function regionPanel(r) {
+  const c = countries[state.selected], pl = pooled(r);
+  const b = L.breakdown(state.selected, c, state.year, anchorIdx).slice(0, 6).map((l) => ({ ...l, v: l.pct }));
+  return `<button class="btn ghost back" data-back="country">${icon("back")}${esc(c.name)}</button>
+    <h2>${esc(r.name)}</h2><p class="sub">${esc([r.type, r.parent, r.unit].filter(Boolean).join(" · "))}${r.local && r.local !== r.name ? ` · ${esc(r.local)}` : ""}</p>
+    ${kpis([["Regional figures", r.shares.length], [`Languages in ${esc(pl.area)}`, pl.langs.length], ["Dialects", pl.dialects.length]])}
+    ${r.shares.length ? `<h3>Regional figures</h3>${rows(r.shares.map((x) => ({ ...x, v: x.pct })), 100, { name: (x) => langBtn(x.lang), val: (x) => `<b>${L.formatPct(x.pct)}</b> · ${x.year ?? ""}` })}
+      <p class="note">${r.shares.map((x) => `${esc(lname(x.lang))}: ${esc(x.metric)} in ${esc(x.region)}. ${esc(x.source)}. Confidence: ${esc(x.confidence)}.`).join("<br>")}</p>`
+      : `<p class="note">No regional survey figure is recorded for this region; the map shows the country-wide value.</p>`}
+    ${pl.langs.length ? `<h3>Languages located in ${esc(pl.area)}</h3><table class="t"><thead><tr><th>Language</th><th>Family</th><th>Status</th></tr></thead><tbody>
+      ${pl.langs.map(([g, e]) => `<tr><td><button data-lang="${e[6] && languages[e[6]] ? e[6] : "g:" + g}">${esc(e[0])}</button></td><td>${esc(e[1])}</td><td>${esc((e[4] ?? "–").replace(/_/g, " "))}</td></tr>`).join("")}</tbody></table>
+      <p class="note">Glottolog places each language at one point, so a language spoken here may be placed in a neighbouring region.</p>` : ""}
+    ${pl.dialects.length ? `<h3>Dialects located here</h3><p>${pl.dialects.map((d) => `<button class="linkish" data-lang="g:${d[1]}">${esc(d[0])}</button>`).join(", ")}</p>` : ""}
+    <h3>Country-wide languages</h3>${rows(b, 100, { name: (l) => langBtn(l.code), val: (l) => `<b>${L.formatPct(l.pct)}</b>` })}`;
+}
+
+// ---------- hello ----------
+const hasVoice = (code) => "speechSynthesis" in window && speechSynthesis.getVoices().some((v) => v.lang.toLowerCase().startsWith(code.toLowerCase()));
+function helloCard(code) {
+  const h = cache.learn?.[code]?.hello;
+  if (!h) return "";
+  const voice = !h.audio && hasVoice(code);
+  return `<div class="hello"><div><span class="hello-word">${esc(h.word)}</span>${h.translit ? `<span class="hello-tr">${esc(h.translit)}</span>` : ""}
+    ${h.ipa ? `<span class="hello-ipa">${esc(h.ipa)}</span>` : ""}</div>
+    ${h.audio || voice ? `<button class="btn outline" data-hello="${esc(code)}">${icon("play")}${h.audio ? "Play recording" : "Play browser voice"}</button>` : ""}
+    <p class="note">“Hello” from <a href="${esc(h.source)}" target="_blank" rel="noopener">Wiktionary</a>${h.audio ? `; recording from <a href="https://commons.wikimedia.org/wiki/File:${encodeURIComponent(h.audio_file)}" target="_blank" rel="noopener">Wikimedia Commons</a>` : voice ? "; spoken by your browser’s synthetic voice" : "; no recording available yet"}.</p></div>`;
+}
+let helloAudio = null;
+function sayHello(code) {
+  const h = cache.learn?.[code]?.hello;
+  if (!h) return;
+  if (h.audio) { helloAudio?.pause(); helloAudio = new Audio(h.audio); helloAudio.play(); return; }
+  const u = new SpeechSynthesisUtterance(h.word);
+  u.lang = code;
+  u.voice = speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith(code.toLowerCase())) ?? null;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+const pageLink = (code) => `<a class="btn outline pagelink" href="language.html?l=${encodeURIComponent(code)}">Language page: hello, free courses and resources</a>`;
+
 // ---------- state changes ----------
 async function update() { recolor(); await renderPanel(); }
-function select(iso2) { state.selected = iso2; update(); }
+async function select(iso2, { center = false } = {}) {
+  state.selected = iso2;
+  state.region = null;
+  state.regions = iso2 ? await loadRegions(iso2) : [];
+  drawRegions();
+  if (center && iso2) centerOn(features.find((f) => f.iso2 === iso2));
+  update();
+}
 async function setLang(code) {
   state.lang = code || null;
   state.selected = null;
-  if (state.lang) await need("gindex", "dialects");
+  if (state.lang) await need("gindex", "dialects", "learn");
   await setMode("languages");
   updatePoints();
 }

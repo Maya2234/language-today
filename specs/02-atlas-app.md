@@ -24,3 +24,15 @@ unknown language, estimate within bounds), languageTotal, topLanguages with anch
 - Anchor metrics differ (mother tongue vs ability vs home language); the anchored series replaces CLDR's L1+L2 figure.
 - CLDR lists Standard Arabic and colloquial varieties separately, which raises the multilingualism index in North Africa.
 - Small territories without World Bank data use CLDR population held flat.
+
+## Session 3 additions
+| Feature | Acceptance |
+|---|---|
+| Map detail: world-atlas 50m countries, ocean depth gradient, coastline halo | Small countries (e.g. Luxembourg, Brunei) are clickable |
+| Click a country → map centres and zooms on it (flat) or rotates to it (globe) | Same from any country link in the panels |
+| Sub-national regions (Natural Earth 10m admin-1, simplified) drawn for the selected country | Hover popup: region, parent region, regional figures, Glottolog languages and dialects located in the parent area, country-wide shares; click → region panel and centring |
+| Regional shares: `pipeline/regional_shares.json` (curated, cited, unverified) + Wikipedia sub-national tables | Every curated entry lands on a region (test) |
+| Naming: Israel shown as "Occupied Palestine" at the owner's request; sources' name kept in `meta.naming` and Data & method | Test |
+| Hello: Wiktionary greeting, transliteration, IPA, Wikimedia Commons recording when one exists, browser speech synthesis otherwise (labelled synthetic) | No audio claimed where none exists |
+| Language page `language.html?l=<code or g:glottocode>`: hello, free resources by kind, map, countries, dialects | Linked from every language panel |
+| Free resources scraped from Duolingo course list, Live Lingua Project, Language Transfer, Wikibooks, plus Wiktionary/Wikipedia/Glottolog links that exist | Only https links; responses cached in data/raw/scrape/cache |

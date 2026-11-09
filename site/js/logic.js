@@ -183,3 +183,27 @@ export function groupTokens(calls, key) {
 export function share(part, whole) {
   return whole ? (100 * part) / whole : 0;
 }
+
+// ---- validation and timeline pages ----
+// True when every word of the query appears in at least one of the given fields (case-insensitive).
+export function matchesQuery(row, query, fields) {
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return true;
+  const text = fields.map((f) => row[f] ?? "").join(" ").toLowerCase();
+  return words.every((w) => text.includes(w));
+}
+
+// Count rows by a key function, keeping first-seen order: [[key, count], ...].
+export function countBy(rows, keyFn) {
+  const counts = new Map();
+  for (const r of rows) {
+    const k = keyFn(r);
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  return [...counts];
+}
+
+// Calendar day of an ISO timestamp in its own offset (the time the person saw on their clock).
+export function dayOf(iso) {
+  return iso.slice(0, 10);
+}

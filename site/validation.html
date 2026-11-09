@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Validation Report</title>
+<meta name="description" content="Every automated test of Language Today, its code and run history, and the review steps behind the results.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="page">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+</defs></svg>
+<header class="pagehead">
+  <a class="btn ghost" href="index.html"><svg class="i"><use href="#i-back"/></svg>Atlas</a>
+  <span class="brandline"><svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="var(--chart-3)"/><path d="M4 16h24M16 2c5 4 5 24 0 28M16 2c-5 4-5 24 0 28" stroke="#fff" stroke-width="2" fill="none"/></svg>Language Today</span>
+  <nav class="pagenav" aria-label="Project pages"><a href="validation.html" aria-current="page">Validation</a><a href="timeline.html">Timeline</a><a href="tokens.html">Tokens</a></nav>
+</header>
+<main class="langpage dash">
+  <div class="langhead">
+    <h1>Validation report</h1>
+    <p class="sub">Every automated test, what it checks, its code, and how it did in each run, plus the review steps (by Maya and by Claude) that found problems the tests did not.</p>
+  </div>
+  <div class="kpis tokkpis" id="kpis"></div>
+
+  <section class="card wide">
+    <div class="cardhead"><h2>Test runs</h2><span class="note" id="runNote"></span></div>
+    <p class="note">Each run of <code>python pipeline/run_tests.py</code>. Click a run to see each test's result in that run.</p>
+    <div class="runs" id="runs"></div>
+  </section>
+
+  <section class="card wide">
+    <div class="cardhead"><h2>Tests</h2><span class="note" id="testCount"></span></div>
+    <div class="filterrow">
+      <label class="search"><svg class="i"><use href="#i-search"/></svg><input id="q" type="search" placeholder="Search tests and code" aria-label="Search tests"></label>
+      <div class="seg" role="group" aria-label="Suite" id="suiteSeg"></div>
+      <div class="seg" role="group" aria-label="Status" id="statusSeg"></div>
+      <select id="area" aria-label="Area"></select>
+    </div>
+    <div class="testlist" id="tests"></div>
+  </section>
+
+  <section class="card wide">
+    <div class="cardhead"><h2>Review log</h2>
+      <div class="seg" role="group" aria-label="Who" id="actorSeg"></div></div>
+    <p class="note">Checks beyond the automated tests: human review, browser checks, test expectations that were changed (with the reason), and bugs found and fixed. Each entry cites the log line it comes from.</p>
+    <div class="reviews" id="reviews"></div>
+  </section>
+
+  <section class="card wide">
+    <h2>Reproduce</h2>
+    <p class="note">Anyone can rerun the pipeline and every test from the repository:</p>
+    <pre class="code" id="repro"></pre>
+    <p class="note" id="method"></p>
+  </section>
+</main>
+<script type="module" src="js/validation.js"></script>
+</body>
+</html>

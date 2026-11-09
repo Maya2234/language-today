@@ -31,6 +31,9 @@ repository on her machine. The code in them was written by Claude.
 | 22:35 | Approved enabling GitHub Pages. | Added the Actions workflow and enabled Pages. Confirmed the live site works: 240 countries, no console errors. |
 | 22:39 | Asked about the method: what agentic development is compared with a chatbot, what CLDR is, and what a spec is. | Answered the questions. No code changes. |
 | 22:52 | Asked for this contribution log, the evaluation and reflection draft, and the token usage document. | Wrote `CONTRIBUTIONS.md`, `EVALUATION_AND_REFLECTION.md` (a draft for Maya to finish) and `TOKEN_USAGE.md`. |
+| 23:05 | Asked for a web interface for token usage; approved commit and push. | Built `site/tokens.html` from the session transcripts (`pipeline/tokens.py`); 59/59 tests; deployed. |
+| Oct 31, 04:28 | **Reported that map selection was glitchy.** | Measured the cause (a 584 ms frame, a wait for the region file, a hidden outline), smoothed selection and globe rotation; deployed after Maya approved. |
+| Nov 9, 15:18 | **Checked the course requirements against the work** and found the validation and timeline pages missing. Asked for both. | Wrote specs 03 and 04, a review log (`docs/log/reviews.jsonl`), `pipeline/report.py`, `site/validation.html` and `site/timeline.html`; corrected two log timestamps with append-only correction entries. |
 
 ## Where Maya's supervision changed the outcome
 

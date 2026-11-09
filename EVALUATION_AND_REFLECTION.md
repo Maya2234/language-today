@@ -30,10 +30,10 @@ Extra features beyond the spec: "hello" in 228 languages (122 with IPA, 38 with 
 |---|---|---|
 | Spec-driven development | Done for phases 0–2. Specs 03–06 are listed but not written. | `specs/` |
 | Data pipeline, reproducible from open data | Done | `pipeline/fetch.py`, `pipeline/build.py` |
-| Validation: tests | Done: 5 logged runs, latest 52/52 passing | `docs/log/tests.jsonl` |
-| Validation: web interface to browse test evidence | **Not started** (phase 3) | — |
-| Timeline / contributions | Done as a document; **web page not started** (phase 4) | `CONTRIBUTIONS.md` |
-| Token usage documentation | Done as a document; **web interface not started** (phase 5) | `TOKEN_USAGE.md` |
+| Validation: tests | Done: 10 logged runs, latest 66/66 passing | `docs/log/tests.jsonl` |
+| Validation: web interface to browse test evidence | Done: search and filter tests, code, run history, review log | `site/validation.html` · https://maya2234.github.io/language-today/validation.html |
+| Timeline / contributions | Done as a document and a web page | `CONTRIBUTIONS.md` · https://maya2234.github.io/language-today/timeline.html |
+| Token usage documentation | Done as a document and a web page | `TOKEN_USAGE.md` · https://maya2234.github.io/language-today/tokens.html |
 | Published on GitHub and the web | Done | https://github.com/Maya2234/language-today · https://maya2234.github.io/language-today/ |
 | Evaluation and reflection | This draft | this file |
 

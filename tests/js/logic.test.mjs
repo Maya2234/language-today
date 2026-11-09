@@ -156,3 +156,19 @@ test("share handles an empty whole", () => {
   assert.equal(L.share(1, 4), 25);
   assert.equal(L.share(1, 0), 0);
 });
+
+test("matchesQuery needs every word in some field", () => {
+  const row = { title: "Fix reach 0%", detail: "Wikipedia L2 tables" };
+  assert.ok(L.matchesQuery(row, "", ["title"]));
+  assert.ok(L.matchesQuery(row, "reach wikipedia", ["title", "detail"]));
+  assert.ok(!L.matchesQuery(row, "reach wikipedia", ["title"]));
+  assert.ok(L.matchesQuery({ title: null }, "  ", ["title"]));
+});
+
+test("countBy keeps first-seen order", () => {
+  assert.deepEqual(L.countBy(["b", "a", "b"], (x) => x), [["b", 2], ["a", 1]]);
+});
+
+test("dayOf uses the timestamp's own offset", () => {
+  assert.equal(L.dayOf("2026-10-30T23:33:34-07:00"), "2026-10-30");
+});

@@ -303,3 +303,44 @@ class TestTokens(unittest.TestCase):
         ids = {s["id"] for s in self.t["sessions"]}
         for e in self.t["excluded"]:
             self.assertNotIn(e["id"], ids)
+
+
+class TestReports(unittest.TestCase):
+    def setUp(self):
+        self.v, self.t = load("validation.json"), load("timeline.json")
+        log = ROOT / "docs" / "log"
+        self.results = [json.loads(l) for l in (log / "tests.jsonl").open(encoding="utf-8") if l.strip()]
+        self.lines = {n: [json.loads(l) for l in (log / n).open(encoding="utf-8") if l.strip()]
+                      for n in ("prompts.jsonl", "progress.jsonl", "reviews.jsonl")}
+
+    def test_provenance_fields(self):
+        for d in (self.v, self.t):
+            self.assertTrue(d["source"])
+            self.assertTrue(d["method"])
+
+    def test_run_counts_match_test_log(self):
+        runs = {r["id"]: r for r in self.v["runs"]}
+        self.assertEqual(set(runs), {r["run_id"] for r in self.results})
+        for rid, run in runs.items():
+            rows = [r for r in self.results if r["run_id"] == rid]
+            self.assertEqual(run["pass"], sum(r["status"] == "pass" for r in rows), rid)
+            self.assertEqual(run["fail"], sum(r["status"] != "pass" for r in rows), rid)
+
+    def test_every_test_in_latest_run_has_source(self):
+        latest = self.v["runs"][-1]["id"]
+        shown = {t["id"]: t for t in self.v["tests"]}
+        for r in self.results:
+            if r["run_id"] == latest:
+                self.assertIn(r["test"], shown)
+                self.assertIn("def " if r["suite"] == "python" else "test(", shown[r["test"]]["code"])
+
+    def test_timeline_has_every_log_line_once_in_order(self):
+        kinds = [e["kind"] for e in self.t["events"]]
+        self.assertEqual(kinds.count("prompt"), len(self.lines["prompts.jsonl"]))
+        self.assertEqual(kinds.count("progress") + kinds.count("correction"), len(self.lines["progress.jsonl"]))
+        other = [k for k in kinds if k not in ("prompt", "progress", "correction", "commit", "test-run")]
+        self.assertEqual(len(other), len(self.lines["reviews.jsonl"]))
+        self.assertEqual(kinds.count("test-run"), len(self.v["runs"]))
+        from datetime import datetime
+        times = [datetime.fromisoformat(e["t"]) for e in self.t["events"]]
+        self.assertEqual(times, sorted(times))

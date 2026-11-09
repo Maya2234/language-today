@@ -64,6 +64,8 @@ def main():
     phase = sys.argv[sys.argv.index("--phase") + 1] if "--phase" in sys.argv else "unspecified"
     now = datetime.now().astimezone()
     run_id = now.strftime("%Y%m%dT%H%M%S")
+    import report  # the report tests check validation/timeline data against the current logs, so rebuild first
+    report.main()
     records = python_suite() + js_suite()
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a", encoding="utf8") as f:
@@ -73,6 +75,7 @@ def main():
     print(f"run {run_id}: {len(records) - len(failed)}/{len(records)} passed")
     for r in failed:
         print(f"  {r['status'].upper()} {r['suite']}:{r['test']} — {r['message']}")
+    report.main()  # and again, so the pages include this run
     return 1 if failed else 0
 
 

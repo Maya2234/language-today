@@ -10,7 +10,7 @@ Project pages: [validation report](https://maya2234.github.io/language-today/val
 Repository: https://github.com/Maya2234/language-today
 
 ## Evaluation
-
+The project did allow a successful use of agentic development to gather and visualize language data including which languages are spoken in different countries and states, which second languages are common per region and % of common speakers based on languages an individual can speak. All this data is visuzalied for readability and efficient user absorption. Agentic development was used to visualize token consumption, build and visualize validation and assist in documentation. 
 Agentic development is a much faster approach to project implemenation than AI assisted development. I think the tradeoff is that you sacrifice learning from the development of the project because you are further removed from the actual implementation and components. In my opinion, agentic development is best suited for creating projects with technology you are already familiar with, and don't have as much to gain from a more involved approach, whether that be by hand or even AI asissted. 
 
 ## Run

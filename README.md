@@ -30,7 +30,7 @@ python pipeline/run_tests.py --phase dev
 
 Every figure is tagged `measured` (a census value), `estimated` (interpolated between census years) or `derived` (a CLDR share × population).
 
-## Evaluation
+## Evaluation materials
 > Evaluating the project for how well it meets the initial goals. This step will be completed primarily by you, not
 > Claude. But you can use Claude to get you information you need for this evaluation.
 
